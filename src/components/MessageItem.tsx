@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Message } from '@/types/chat';
+import { Message, ImageAttachment } from '@/types/chat';
 import { CodeBlock } from './CodeBlock';
 import {
   Bot,
@@ -14,7 +14,10 @@ import {
   Edit2,
   AlertTriangle,
   Sparkles,
-  X
+  Download,
+  Maximize2,
+  X,
+  ImageIcon
 } from 'lucide-react';
 
 interface MessageItemProps {
@@ -35,6 +38,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [selectedZoomImage, setSelectedZoomImage] = useState<ImageAttachment | null>(null);
 
   const isUser = message.role === 'user';
 
@@ -55,6 +59,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     } else {
       setIsEditing(false);
     }
+  };
+
+  const handleDownloadImage = (url: string, filename = 'jarvis_image.jpg') => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   return (
@@ -170,7 +184,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           ) : (
             /* Main Content Rendering */
-            <div className="markdown-content text-slate-300 dark:text-slate-200 text-sm md:text-base leading-relaxed break-words">
+            <div className="markdown-content text-slate-300 dark:text-slate-200 text-sm md:text-base leading-relaxed break-words space-y-3">
               {message.isError ? (
                 <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 text-sm">
                   <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
@@ -219,49 +233,57 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                         </a>
                       );
                     },
-                    table({ children }) {
-                      return (
-                        <div className="overflow-x-auto my-4 rounded-xl border border-slate-700/60">
-                          <table className="min-w-full divide-y divide-slate-700/80 text-sm text-left text-slate-300">
-                            {children}
-                          </table>
-                        </div>
-                      );
-                    },
-                    thead({ children }) {
-                      return (
-                        <thead className="bg-slate-800/80 text-slate-200 font-semibold uppercase text-xs">
-                          {children}
-                        </thead>
-                      );
-                    },
-                    tbody({ children }) {
-                      return (
-                        <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
-                          {children}
-                        </tbody>
-                      );
-                    },
-                    th({ children }) {
-                      return <th className="px-4 py-2.5">{children}</th>;
-                    },
-                    td({ children }) {
-                      return <td className="px-4 py-2.5">{children}</td>;
-                    },
-                    blockquote({ children }) {
-                      return (
-                        <blockquote className="border-l-4 border-cyan-500/60 pl-4 py-1 italic text-slate-400 my-3 bg-slate-900/30 rounded-r-lg">
-                          {children}
-                        </blockquote>
-                      );
-                    },
                   }}
                 >
                   {message.content}
                 </ReactMarkdown>
               )}
 
-              {/* Streaming Indicator Pulsing Cursor */}
+              {/* Render Image Attachments / AI Generated Images Grid */}
+              {message.images && message.images.length > 0 && (
+                <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {message.images.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="group/img relative rounded-2xl overflow-hidden border border-slate-700/80 bg-slate-950 shadow-xl cursor-pointer"
+                      onClick={() => setSelectedZoomImage(img)}
+                    >
+                      <img
+                        src={img.url}
+                        alt={img.title || 'Image'}
+                        className="w-full h-48 sm:h-56 object-cover group-hover/img:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity p-3 flex flex-col justify-between">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadImage(img.url);
+                            }}
+                            className="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+                            title="Download Image"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            {img.isGenerated ? '✨ AI Generated' : img.source || 'Search Result'}
+                          </span>
+                          {img.title && (
+                            <p className="text-xs text-white font-medium truncate mt-1">
+                              {img.title}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Streaming Cursor */}
               {!isUser && isStreaming && isLast && (
                 <span className="inline-block w-2.5 h-4 ml-1 bg-cyan-400 animate-pulse rounded-sm vertical-align-middle" />
               )}
@@ -269,6 +291,46 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           )}
         </div>
       </div>
+
+      {/* Fullscreen Image Zoom Modal */}
+      {selectedZoomImage && (
+        <div
+          onClick={() => setSelectedZoomImage(null)}
+          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-700 shadow-2xl space-y-3 p-4"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs text-slate-300">
+              <span className="font-semibold text-slate-100 truncate">
+                {selectedZoomImage.title || 'Image Preview'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownloadImage(selectedZoomImage.url)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download
+                </button>
+                <button
+                  onClick={() => setSelectedZoomImage(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-slate-800"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[75vh] overflow-hidden flex items-center justify-center rounded-2xl bg-slate-950">
+              <img
+                src={selectedZoomImage.url}
+                alt={selectedZoomImage.title || 'Zoom Preview'}
+                className="max-h-[75vh] w-auto object-contain rounded-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

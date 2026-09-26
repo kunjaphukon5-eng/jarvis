@@ -22,13 +22,14 @@ import {
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { ChatArea } from '@/components/ChatArea';
-import { ChatInput } from '@/components/ChatInput';
+import { ChatInput, InputMode } from '@/components/ChatInput';
 import { SettingsModal } from '@/components/SettingsModal';
 
 export default function Home() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
+  const [inputMode, setInputMode] = useState<InputMode>('CHAT');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -122,6 +123,7 @@ export default function Home() {
     setSessions((prev) => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
     setInput('');
+    setInputMode('CHAT');
   };
 
   // Switch Active Session
@@ -223,6 +225,158 @@ export default function Home() {
       abortControllerRef.current = null;
     }
     setIsStreaming(false);
+  };
+
+  // Image Generation Handler
+  const handleGenerateImage = async (prompt: string, sessionId: string, newMsgList: Message[]) => {
+    setIsStreaming(true);
+    const assistantMsgId = generateId();
+
+    const initialAssistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '🎨 Generating AI image with prompt: "' + prompt + '"...',
+      createdAt: Date.now(),
+    };
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              messages: [...newMsgList, initialAssistantMsg],
+              updatedAt: Date.now(),
+            }
+          : s
+      )
+    );
+
+    try {
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to generate image.');
+      }
+
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== sessionId) return s;
+          const updatedMsgs = s.messages.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: `Here is your generated image for: **"${prompt}"**`,
+                  images: [
+                    {
+                      url: data.url,
+                      title: prompt,
+                      isGenerated: true,
+                    },
+                  ],
+                }
+              : msg
+          );
+          return { ...s, messages: updatedMsgs, updatedAt: Date.now() };
+        })
+      );
+    } catch (err: any) {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== sessionId) return s;
+          const updatedMsgs = s.messages.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: err.message || 'Image generation failed.',
+                  isError: true,
+                }
+              : msg
+          );
+          return { ...s, messages: updatedMsgs, updatedAt: Date.now() };
+        })
+      );
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  // Image Search Handler
+  const handleSearchImages = async (query: string, sessionId: string, newMsgList: Message[]) => {
+    setIsStreaming(true);
+    const assistantMsgId = generateId();
+
+    const initialAssistantMsg: Message = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '🔍 Searching web images for: "' + query + '"...',
+      createdAt: Date.now(),
+    };
+
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              messages: [...newMsgList, initialAssistantMsg],
+              updatedAt: Date.now(),
+            }
+          : s
+      )
+    );
+
+    try {
+      const res = await fetch('/api/image-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to search images.');
+      }
+
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== sessionId) return s;
+          const updatedMsgs = s.messages.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: `Found web images matching: **"${query}"**`,
+                  images: data.images,
+                }
+              : msg
+          );
+          return { ...s, messages: updatedMsgs, updatedAt: Date.now() };
+        })
+      );
+    } catch (err: any) {
+      setSessions((prev) =>
+        prev.map((s) => {
+          if (s.id !== sessionId) return s;
+          const updatedMsgs = s.messages.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: err.message || 'Image search failed.',
+                  isError: true,
+                }
+              : msg
+          );
+          return { ...s, messages: updatedMsgs, updatedAt: Date.now() };
+        })
+      );
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   // Core AI Stream Request Handler
@@ -331,6 +485,7 @@ export default function Home() {
     if (!input.trim() || isStreaming || !activeSessionId) return;
 
     const userText = input.trim();
+    const currentMode = inputMode;
     setInput('');
 
     const userMessage: Message = {
@@ -363,7 +518,31 @@ export default function Home() {
       )
     );
 
-    await sendChatRequest(newMsgList, activeSessionId);
+    // Intent routing
+    const lower = userText.toLowerCase();
+    if (
+      currentMode === 'GENERATE_IMAGE' ||
+      userText.startsWith('/image') ||
+      lower.startsWith('generate an image') ||
+      lower.startsWith('create an image') ||
+      lower.startsWith('generate image')
+    ) {
+      const cleanPrompt = userText.replace(/^\/image\s*/i, '');
+      await handleGenerateImage(cleanPrompt, activeSessionId, newMsgList);
+    } else if (
+      currentMode === 'SEARCH_IMAGE' ||
+      lower.startsWith('search images of') ||
+      lower.startsWith('search for images of') ||
+      lower.startsWith('show images of')
+    ) {
+      const query = userText
+        .replace(/^search images of\s*/i, '')
+        .replace(/^search for images of\s*/i, '')
+        .replace(/^show images of\s*/i, '');
+      await handleSearchImages(query, activeSessionId, newMsgList);
+    } else {
+      await sendChatRequest(newMsgList, activeSessionId);
+    }
   };
 
   // Regenerate Response
@@ -503,6 +682,8 @@ export default function Home() {
         <ChatInput
           input={input}
           setInput={setInput}
+          inputMode={inputMode}
+          setInputMode={setInputMode}
           onSend={handleSendMessage}
           onStop={handleStopStreaming}
           isStreaming={isStreaming}

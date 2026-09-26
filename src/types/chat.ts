@@ -1,5 +1,12 @@
 export type Role = 'user' | 'assistant' | 'system';
 
+export interface ImageAttachment {
+  url: string;
+  title?: string;
+  source?: string;
+  isGenerated?: boolean;
+}
+
 export interface Message {
   id: string;
   role: Role;
@@ -8,6 +15,7 @@ export interface Message {
   updatedAt?: number;
   isError?: boolean;
   modelUsed?: string;
+  images?: ImageAttachment[];
 }
 
 export interface ChatSession {
