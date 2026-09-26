@@ -24,10 +24,8 @@ import { Header } from '@/components/Header';
 import { ChatArea } from '@/components/ChatArea';
 import { ChatInput } from '@/components/ChatInput';
 import { SettingsModal } from '@/components/SettingsModal';
-import { NeonCityGame } from '@/game/NeonCityGame';
 
 export default function Home() {
-  const [appMode, setAppMode] = useState<'JARVIS' | 'GAME'>('GAME');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
@@ -453,14 +451,10 @@ export default function Home() {
       <div className="min-h-screen bg-[#070a11] flex items-center justify-center text-cyan-400 font-mono text-sm">
         <div className="flex items-center gap-3">
           <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
-          <span>Initializing Neon City Engine...</span>
+          <span>Initializing Jarvis Assistant...</span>
         </div>
       </div>
     );
-  }
-
-  if (appMode === 'GAME') {
-    return <NeonCityGame onSwitchToJarvis={() => setAppMode('JARVIS')} />;
   }
 
   return (
@@ -491,7 +485,6 @@ export default function Home() {
           onNewChat={handleNewChat}
           onClearCurrentChat={handleClearCurrentChat}
           availableModels={availableModels}
-          onSwitchToGame={() => setAppMode('GAME')}
         />
 
         {/* Scrollable Conversation Workspace */}
