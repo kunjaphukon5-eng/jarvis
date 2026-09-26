@@ -12,7 +12,8 @@ import {
   Trash2,
   Check,
   Cpu,
-  Search
+  Search,
+  Gamepad2
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,6 +23,7 @@ interface HeaderProps {
   onNewChat: () => void;
   onClearCurrentChat: () => void;
   availableModels?: ModelOption[];
+  onSwitchToGame?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNewChat,
   onClearCurrentChat,
   availableModels = DEFAULT_MODELS,
+  onSwitchToGame,
 }) => {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [customModelInput, setCustomModelInput] = useState('');
@@ -180,6 +183,16 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right side: Action Buttons */}
       <div className="flex items-center gap-2">
+        {onSwitchToGame && (
+          <button
+            onClick={onSwitchToGame}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-500/20 transition-all"
+          >
+            <Gamepad2 className="w-4 h-4" />
+            <span>Neon City 3D</span>
+          </button>
+        )}
+
         <button
           onClick={onNewChat}
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700/60 transition-colors"
