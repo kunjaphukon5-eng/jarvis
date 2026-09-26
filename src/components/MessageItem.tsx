@@ -74,8 +74,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           ) : (
             <div className="relative group/avatar">
-              <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 border border-indigo-400/30">
-                <Bot className="w-4 h-4 md:w-5 md:h-5" />
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/30 border border-indigo-400/30 bg-[#0b101c]">
+                <img src="/logo.png" alt="Jarvis AI" className="w-full h-full object-cover" />
               </div>
               <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>

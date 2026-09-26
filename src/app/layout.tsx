@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'Jarvis AI - Ultron Assistant',
   description: 'A modern, high-performance AI chat interface powered by OpenRouter and Ultron Intelligence.',
   keywords: ['AI', 'Jarvis', 'ChatGPT', 'OpenRouter', 'Ultron', 'Next.js', 'LLM'],
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({

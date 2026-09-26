@@ -95,8 +95,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* Hero Avatar Emblem */}
           <div className="relative group">
             <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 opacity-60 blur-lg group-hover:opacity-100 transition duration-500"></div>
-            <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-[#0b101c] border border-cyan-400/40 flex items-center justify-center shadow-2xl text-cyan-400">
-              <Bot className="w-10 h-10 md:w-12 md:h-12 text-cyan-300 animate-pulse" />
+            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden bg-[#0b101c] border border-cyan-400/50 flex items-center justify-center shadow-2xl">
+              <img src="/logo.png" alt="Jarvis AI Logo" className="w-full h-full object-cover" />
             </div>
           </div>
 
