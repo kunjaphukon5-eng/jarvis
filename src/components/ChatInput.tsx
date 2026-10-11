@@ -1,7 +1,20 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { Send, Square, Sparkles, Search, Palette, MessageSquare } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  Send,
+  Square,
+  Sparkles,
+  Search,
+  Palette,
+  MessageSquare,
+  Mic,
+  Volume2,
+  VolumeX,
+  Camera,
+  Wand2
+} from 'lucide-react';
+import { speechService, createSpeechRecognizer } from '@/utils/speech';
 
 export type InputMode = 'CHAT' | 'SEARCH_IMAGE' | 'GENERATE_IMAGE';
 
@@ -14,6 +27,7 @@ interface ChatInputProps {
   onStop: () => void;
   isStreaming: boolean;
   modelName: string;
+  onOpenPhotoStudio: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -25,8 +39,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onStop,
   isStreaming,
   modelName,
+  onOpenPhotoStudio,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isListeningMic, setIsListeningMic] = useState(false);
+  const [isReadingPrompt, setIsReadingPrompt] = useState(false);
 
   // Auto-resize textarea height
   useEffect(() => {
@@ -48,58 +65,107 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  // Toggle Voice Dictation Microphone
+  const handleToggleMic = () => {
+    if (isListeningMic) {
+      setIsListeningMic(false);
+      return;
+    }
+
+    const recognizer = createSpeechRecognizer(
+      (transcript) => {
+        setInput(input ? `${input} ${transcript}` : transcript);
+        setIsListeningMic(false);
+      },
+      () => setIsListeningMic(false),
+      () => setIsListeningMic(false)
+    );
+
+    if (recognizer) {
+      setIsListeningMic(true);
+      recognizer.start();
+    } else {
+      alert('Speech recognition is not supported in this browser.');
+    }
+  };
+
+  // Read Prompt Aloud
+  const handleReadPrompt = () => {
+    if (!input.trim()) return;
+    if (isReadingPrompt) {
+      speechService.stop();
+      setIsReadingPrompt(false);
+    } else {
+      setIsReadingPrompt(true);
+      speechService.readText(input, () => setIsReadingPrompt(false));
+    }
+  };
+
   const getPlaceholder = () => {
     if (inputMode === 'SEARCH_IMAGE') return 'Search for web images (e.g. quantum computer, cyberpunk city)...';
     if (inputMode === 'GENERATE_IMAGE') return 'Describe an AI image to generate (e.g. futuristic glowing robot avatar)...';
-    return 'Ask Jarvis anything...';
+    return 'Ask Jarvis anything or speak prompt...';
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 pb-4 sm:pb-6">
       <div className="relative rounded-2xl bg-slate-900/90 dark:bg-[#0c121e]/90 border border-slate-700/80 focus-within:border-cyan-500/60 shadow-2xl transition-all duration-200">
         {/* Mode Selector Pill Bar */}
-        <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1 border-b border-slate-800/40 select-none overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setInputMode('CHAT')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              inputMode === 'CHAT'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>AI Chat</span>
-          </button>
+        <div className="flex items-center justify-between px-3 pt-2.5 pb-1 border-b border-slate-800/40 select-none overflow-x-auto gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setInputMode('CHAT')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                inputMode === 'CHAT'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>AI Chat</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setInputMode('SEARCH_IMAGE')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              inputMode === 'SEARCH_IMAGE'
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <Search className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Search Images</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('SEARCH_IMAGE')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                inputMode === 'SEARCH_IMAGE'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Search className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Search Images</span>
+            </button>
 
+            <button
+              type="button"
+              onClick={() => setInputMode('GENERATE_IMAGE')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                inputMode === 'GENERATE_IMAGE'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Palette className="w-3.5 h-3.5 text-purple-400" />
+              <span>Quick Image</span>
+            </button>
+          </div>
+
+          {/* Detailed Photo Generator Studio Launcher */}
           <button
             type="button"
-            onClick={() => setInputMode('GENERATE_IMAGE')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              inputMode === 'GENERATE_IMAGE'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
+            onClick={onOpenPhotoStudio}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-600/30 to-purple-600/30 hover:from-cyan-600/50 hover:to-purple-600/50 text-cyan-300 border border-cyan-500/40 transition-all shrink-0"
+            title="Open Detailed AI Photo Generator Studio"
           >
-            <Palette className="w-3.5 h-3.5 text-purple-400" />
-            <span>Generate AI Image</span>
+            <Camera className="w-3.5 h-3.5 text-cyan-400" />
+            <span>AI Photo Studio</span>
           </button>
         </div>
 
-        {/* Top Textarea */}
+        {/* Textarea Input */}
         <textarea
           ref={textareaRef}
           value={input}
@@ -119,9 +185,35 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 hidden md:inline-block">
-              Press <kbd className="px-1 py-0.5 bg-slate-800 rounded text-slate-400">Shift</kbd> + <kbd className="px-1 py-0.5 bg-slate-800 rounded text-slate-400">Enter</kbd> for new line
-            </span>
+            {/* Prompt Reader Speaker Button (read aloud draft prompt) */}
+            {input.trim() && (
+              <button
+                type="button"
+                onClick={handleReadPrompt}
+                title={isReadingPrompt ? "Stop reading draft prompt" : "Read prompt aloud (Prompt Reader)"}
+                className={`p-2 rounded-xl border transition-all ${
+                  isReadingPrompt
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                    : 'bg-slate-800/80 text-slate-400 hover:text-cyan-300 border-slate-700/60'
+                }`}
+              >
+                {isReadingPrompt ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            )}
+
+            {/* Voice Dictation Microphone Button */}
+            <button
+              type="button"
+              onClick={handleToggleMic}
+              title={isListeningMic ? "Listening... click to stop" : "Speak prompt (Voice Dictation)"}
+              className={`p-2 rounded-xl border transition-all ${
+                isListeningMic
+                  ? 'bg-red-500/20 text-red-300 border-red-500/40 animate-pulse shadow-md shadow-red-500/20'
+                  : 'bg-slate-800/80 text-slate-400 hover:text-white border-slate-700/60'
+              }`}
+            >
+              <Mic className="w-4 h-4" />
+            </button>
 
             {isStreaming ? (
               <button

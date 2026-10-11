@@ -12,7 +12,8 @@ import {
   Trash2,
   Check,
   Cpu,
-  Search
+  Search,
+  Camera
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,6 +23,7 @@ interface HeaderProps {
   onNewChat: () => void;
   onClearCurrentChat: () => void;
   availableModels?: ModelOption[];
+  onOpenPhotoStudio?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNewChat,
   onClearCurrentChat,
   availableModels = DEFAULT_MODELS,
+  onOpenPhotoStudio,
 }) => {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [customModelInput, setCustomModelInput] = useState('');
@@ -180,6 +183,17 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right side: Action Buttons */}
       <div className="flex items-center gap-2">
+        {onOpenPhotoStudio && (
+          <button
+            onClick={onOpenPhotoStudio}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600/30 to-purple-600/30 hover:from-cyan-600/50 hover:to-purple-600/50 text-cyan-300 border border-cyan-500/40 text-xs font-semibold shadow-sm transition-all"
+            title="Open Detailed AI Photo Generator Engine Studio"
+          >
+            <Camera className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">Photo Studio</span>
+          </button>
+        )}
+
         <button
           onClick={onNewChat}
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700/60 transition-colors"

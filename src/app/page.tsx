@@ -24,6 +24,7 @@ import { Header } from '@/components/Header';
 import { ChatArea } from '@/components/ChatArea';
 import { ChatInput, InputMode } from '@/components/ChatInput';
 import { SettingsModal } from '@/components/SettingsModal';
+import { PhotoStudioModal } from '@/components/PhotoStudioModal';
 
 export default function Home() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -33,6 +34,7 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [currentModel, setCurrentModel] = useState<string>(DEFAULT_SETTINGS.defaultModel);
   const [availableModels, setAvailableModels] = useState<ModelOption[]>(DEFAULT_MODELS);
@@ -625,6 +627,41 @@ export default function Home() {
     }
   };
 
+  // Insert photo from studio into chat
+  const handleInsertPhotoToChat = (promptText: string, imageUrl: string) => {
+    if (!activeSessionId) return;
+    const userMsg: Message = {
+      id: generateId(),
+      role: 'user',
+      content: `/image ${promptText}`,
+      createdAt: Date.now(),
+    };
+    const assistantMsg: Message = {
+      id: generateId(),
+      role: 'assistant',
+      content: `Synthesized photographic render for: **"${promptText}"**`,
+      createdAt: Date.now(),
+      images: [
+        {
+          url: imageUrl,
+          title: promptText,
+          isGenerated: true,
+        },
+      ],
+    };
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === activeSessionId
+          ? {
+              ...s,
+              messages: [...(s.messages || []), userMsg, assistantMsg],
+              updatedAt: Date.now(),
+            }
+          : s
+      )
+    );
+  };
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-[#070a11] flex items-center justify-center text-cyan-400 font-mono text-sm">
@@ -664,6 +701,7 @@ export default function Home() {
           onNewChat={handleNewChat}
           onClearCurrentChat={handleClearCurrentChat}
           availableModels={availableModels}
+          onOpenPhotoStudio={() => setIsPhotoStudioOpen(true)}
         />
 
         {/* Scrollable Conversation Workspace */}
@@ -688,6 +726,7 @@ export default function Home() {
           onStop={handleStopStreaming}
           isStreaming={isStreaming}
           modelName={currentModel}
+          onOpenPhotoStudio={() => setIsPhotoStudioOpen(true)}
         />
       </div>
 
@@ -699,6 +738,13 @@ export default function Home() {
         onSaveSettings={handleSaveSettings}
         onExportChats={handleExportChats}
         onImportChats={handleImportChats}
+      />
+
+      {/* Detailed AI Photo Generator Engine Studio Modal */}
+      <PhotoStudioModal
+        isOpen={isPhotoStudioOpen}
+        onClose={() => setIsPhotoStudioOpen(false)}
+        onInsertToChat={handleInsertPhotoToChat}
       />
     </div>
   );

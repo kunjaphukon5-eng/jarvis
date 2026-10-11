@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message, ImageAttachment } from '@/types/chat';
 import { CodeBlock } from './CodeBlock';
+import { speechService } from '@/utils/speech';
 import {
   Bot,
   User,
@@ -17,7 +18,9 @@ import {
   Download,
   Maximize2,
   X,
-  ImageIcon
+  ImageIcon,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 interface MessageItemProps {
@@ -39,6 +42,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [selectedZoomImage, setSelectedZoomImage] = useState<ImageAttachment | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const isUser = message.role === 'user';
 
@@ -69,6 +73,16 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     document.body.appendChild(a);
     a.click();
     a.remove();
+  };
+
+  const handleToggleSpeak = () => {
+    if (isSpeaking) {
+      speechService.stop();
+      setIsSpeaking(false);
+    } else {
+      setIsSpeaking(true);
+      speechService.readText(message.content, () => setIsSpeaking(false));
+    }
   };
 
   return (
@@ -130,6 +144,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   <Check className="w-4 h-4 text-emerald-400" />
                 ) : (
                   <Copy className="w-4 h-4" />
+                )}
+              </button>
+
+              {/* Prompt Reader / Audio Speaker Button */}
+              <button
+                onClick={handleToggleSpeak}
+                title={isSpeaking ? "Stop reading" : "Read aloud (Prompt Reader)"}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isSpeaking
+                    ? 'text-cyan-400 bg-cyan-500/20 animate-pulse'
+                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60'
+                }`}
+              >
+                {isSpeaking ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
                 )}
               </button>
 
